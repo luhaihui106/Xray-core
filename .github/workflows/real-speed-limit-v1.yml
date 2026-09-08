@@ -1,0 +1,55 @@
+name: real-speed-limit-v1
+
+on:
+  push:
+    branches:
+      - feature/real-client-speed-limit-v1
+    paths:
+      - .github/real-speedlimit/**
+      - .github/workflows/real-speed-limit-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/real-client-speed-limit-v1
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install protobuf compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+
+      - name: Apply dispatcher patch and regenerate protobuf
+        run: |
+          python3 .github/real-speedlimit/patch_dispatcher.py
+          protoc --go_out=. --go_opt=paths=source_relative common/protocol/user.proto
+          gofmt -w common/protocol/user.go common/protocol/user.pb.go app/limiter app/dispatcher/default.go
+
+      - name: Test and build
+        run: |
+          go test ./app/limiter ./common/protocol
+          go build -o /tmp/xray ./main
+
+      - name: Commit generated source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add common/protocol/user.pb.go app/dispatcher/default.go app/limiter common/protocol/user.go common/protocol/user.proto
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+          else
+            git commit -m "feat: wire real per-client bandwidth limiter into Xray"
+            git push origin HEAD:feature/real-client-speed-limit-v1
+          fi

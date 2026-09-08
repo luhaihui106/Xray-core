@@ -29,9 +29,11 @@ func (u *User) ToMemoryUser() (*MemoryUser, error) {
 		return nil, err
 	}
 	return &MemoryUser{
-		Account: account,
-		Email:   u.Email,
-		Level:   u.Level,
+		Account:            account,
+		Email:              u.Email,
+		Level:              u.Level,
+		SpeedLimitUpMbps:   u.SpeedLimitUpMbps,
+		SpeedLimitDownMbps: u.SpeedLimitDownMbps,
 	}, nil
 }
 
@@ -40,9 +42,11 @@ func ToProtoUser(mu *MemoryUser) *User {
 		return nil
 	}
 	return &User{
-		Account: serial.ToTypedMessage(mu.Account.ToProto()),
-		Email:   mu.Email,
-		Level:   mu.Level,
+		Account:            serial.ToTypedMessage(mu.Account.ToProto()),
+		Email:              mu.Email,
+		Level:              mu.Level,
+		SpeedLimitUpMbps:   mu.SpeedLimitUpMbps,
+		SpeedLimitDownMbps: mu.SpeedLimitDownMbps,
 	}
 }
 
@@ -52,4 +56,8 @@ type MemoryUser struct {
 	Account Account
 	Email   string
 	Level   uint32
+
+	// Aggregate per-client bandwidth limits in decimal Mbps. 0 = unlimited.
+	SpeedLimitUpMbps   uint32
+	SpeedLimitDownMbps uint32
 }
