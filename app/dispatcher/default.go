@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xtls/xray-core/app/limiter"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/errors"
@@ -25,6 +26,8 @@ import (
 )
 
 var errSniffingTimeout = errors.New("timeout on sniffing")
+
+var clientRateLimiters = limiter.NewManager()
 
 type cachedReader struct {
 	sync.Mutex
@@ -159,6 +162,10 @@ func (d *DefaultDispatcher) getLink(ctx context.Context) (*transport.Link, *tran
 	}
 
 	if user != nil && len(user.Email) > 0 {
+		rates := clientRateLimiters.ForUser(user.Email, user.SpeedLimitUpMbps, user.SpeedLimitDownMbps)
+		inboundLink.Writer = limiter.WrapWriter(ctx, inboundLink.Writer, rates.Up)
+		outboundLink.Writer = limiter.WrapWriter(ctx, outboundLink.Writer, rates.Down)
+
 		p := d.policy.ForLevel(user.Level)
 		if p.Stats.UserUplink {
 			name := "user>>>" + user.Email + ">>>traffic>>>uplink"
@@ -192,6 +199,12 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 	var user *protocol.MemoryUser
 	if sessionInbound != nil {
 		user = sessionInbound.User
+	}
+
+	if user != nil && len(user.Email) > 0 {
+		rates := clientRateLimiters.ForUser(user.Email, user.SpeedLimitUpMbps, user.SpeedLimitDownMbps)
+		link.Reader = limiter.WrapReader(ctx, link.Reader, rates.Up)
+		link.Writer = limiter.WrapWriter(ctx, link.Writer, rates.Down)
 	}
 
 	link.Reader = &buf.TimeoutWrapperReader{Reader: link.Reader}

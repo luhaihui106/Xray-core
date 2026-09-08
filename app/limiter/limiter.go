@@ -112,7 +112,7 @@ func (r *Reader) ReadMultiBuffer() (buf.MultiBuffer, error) {
 	return mb, err
 }
 
-func (r *Reader) Interrupt() { common.Interrupt(r.r) }
+func (r *Reader) Interrupt()   { common.Interrupt(r.r) }
 func (r *Reader) Close() error { return common.Close(r.r) }
 
 type Writer struct {
@@ -138,5 +138,5 @@ func (w *Writer) WriteMultiBuffer(mb buf.MultiBuffer) error {
 	return w.w.WriteMultiBuffer(mb)
 }
 
-func (w *Writer) Interrupt() { common.Interrupt(w.w) }
+func (w *Writer) Interrupt()   { common.Interrupt(w.w) }
 func (w *Writer) Close() error { return common.Close(w.w) }
