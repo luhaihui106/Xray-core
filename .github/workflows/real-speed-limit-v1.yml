@@ -40,7 +40,7 @@ jobs:
       - name: Test and build
         run: |
           go test ./app/limiter ./common/protocol
-          go build ./main
+          go build -o /tmp/xray ./main
 
       - name: Commit generated source changes
         run: |
